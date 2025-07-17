@@ -242,15 +242,18 @@ export function MarketDataClient() {
           </div>
         )}
 
-        {marketData3m && marketData3m.length > 0 && !isLoading &&(
+                {marketData3m && marketData3m.length > 0 && !isLoading &&(
           <div className="animate-in fade-in-50 duration-500">
             <MarketDataDisplay 
               data={marketData3m} 
               showOhlcv={showOhlcv} 
               title="3分钟数据" 
-              symbol={currentSymbol} 
+              symbol={currentSymbol}
+              // 3分钟数据同样启用AI分析
               isAnalysisEnabled={true}
-            />
+              // 3分钟数据启用15分钟聚合分析选项
+              show15MinAggregation={true}
+              />
           </div>
         )}
       </div>

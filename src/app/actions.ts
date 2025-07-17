@@ -4,7 +4,7 @@ import type { MarketData } from "@/types/market";
 import { getDocClient } from "@/lib/dynamodb";
 import { QueryCommand, ScanCommand } from "@aws-sdk/lib-dynamodb";
 import { revalidatePath } from "next/cache";
-import { analyzeMarketData } from "@/ai/flows/analyze-market-flow";
+import { analyzeMarketData, analyzeMarketDataWith15MinAggregation } from "@/ai/flows/analyze-market-flow";
 
 const MARKET_DATA_TABLE_PREFIX = "market_ohlcv";
 
@@ -99,6 +99,30 @@ export async function analyzeMarketSentiment(data: MarketData[], apiKey: string)
         return { analysis: result };
     } catch (error: any) {
         console.error("Error during market analysis:", error);
+        
+        const fullErrorString = error.message || JSON.stringify(error, Object.getOwnPropertyNames(error), 2);
+        
+        // Restore user-friendly error message for common API key issues.
+        if (fullErrorString.includes('API key not valid') || fullErrorString.includes('permission_denied') || fullErrorString.includes('PERMISSION_DENIED') || fullErrorString.includes('API key is invalid')) {
+            return { error: "您提供的 Gemini API 密钥无效或格式不正确，请检查后重试。" };
+        }
+
+        // For all other errors, return the full details for debugging.
+        return { error: `AI analysis failed: \n${fullErrorString}` };
+    }
+}
+
+export async function analyzeMarketSentimentWith15MinAggregation(data: MarketData[], apiKey: string): Promise<{ analysis?: string; error?: string }> {
+    if (!apiKey) {
+        return { error: "Gemini API key is missing. Please set it in the configuration before running analysis." };
+    }
+
+    try {
+        const result = await analyzeMarketDataWith15MinAggregation({ marketData: data }, apiKey);
+        revalidatePath('/');
+        return { analysis: result };
+    } catch (error: any) {
+        console.error("Error during 15-min aggregated market analysis:", error);
         
         const fullErrorString = error.message || JSON.stringify(error, Object.getOwnPropertyNames(error), 2);
         
