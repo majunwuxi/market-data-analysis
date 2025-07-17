@@ -1,0 +1,12 @@
+diff --git a/node_modules/@genkit-ai/next/package.json b/node_modules/@genkit-ai/next/package.json
+index 45b88ab..1660f58 100644
+--- a/node_modules/@genkit-ai/next/package.json
++++ b/node_modules/@genkit-ai/next/package.json
+@@ -29,6 +29,6 @@
+     "@genkit-ai/core": "workspace:^"
+   },
+   "peerDependencies": {
+-    "next-auth": "^4.24.5"
++    "next-auth": "^5.0.0-beta.20"
+   }
+ }
