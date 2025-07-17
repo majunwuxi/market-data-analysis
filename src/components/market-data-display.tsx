@@ -23,36 +23,36 @@ interface MarketDataDisplayProps {
   isAnalysisEnabled: boolean;
 }
 
-// 自定义Markdown组件样式
+// 自定义Markdown组件样式 - 使用完整的类名确保不被 Tailwind purge 清除
 const MarkdownComponents = {
   h1: ({ children }: any) => (
-    <h1 className="text-xl font-bold text-foreground mb-3 flex items-center">
-      <Activity className="mr-2 h-5 w-5 text-primary" />
-      {children}
+    <h1 className="text-xl font-bold text-foreground mb-3 flex items-center gap-2">
+      <Activity className="h-5 w-5 text-primary flex-shrink-0" />
+      <span>{children}</span>
     </h1>
   ),
   h2: ({ children }: any) => (
-    <h2 className="text-lg font-semibold text-foreground mb-2 mt-4 flex items-center">
-      <div className="w-2 h-2 bg-primary rounded-full mr-2" />
-      {children}
+    <h2 className="text-lg font-semibold text-foreground mb-2 mt-4 flex items-center gap-2">
+      <div className="w-2 h-2 bg-primary rounded-full flex-shrink-0"></div>
+      <span>{children}</span>
     </h2>
   ),
   h3: ({ children }: any) => (
-    <h3 className="text-base font-medium text-foreground mb-2 mt-3 flex items-center">
-      <div className="w-1.5 h-1.5 bg-muted-foreground rounded-full mr-2" />
-      {children}
+    <h3 className="text-base font-medium text-foreground mb-2 mt-3 flex items-center gap-2">
+      <div className="w-1.5 h-1.5 bg-muted-foreground rounded-full flex-shrink-0"></div>
+      <span>{children}</span>
     </h3>
   ),
   p: ({ children }: any) => (
     <p className="text-sm text-muted-foreground mb-2 leading-relaxed">{children}</p>
   ),
   ul: ({ children }: any) => (
-    <ul className="list-none space-y-1 mb-3">{children}</ul>
+    <ul className="list-none space-y-1 mb-3 pl-0">{children}</ul>
   ),
   li: ({ children }: any) => (
-    <li className="text-sm text-muted-foreground flex items-start">
-      <div className="w-1 h-1 bg-primary rounded-full mr-2 mt-2 flex-shrink-0" />
-      <span>{children}</span>
+    <li className="text-sm text-muted-foreground flex items-start gap-2">
+      <div className="w-1 h-1 bg-primary rounded-full mt-2 flex-shrink-0"></div>
+      <span className="flex-1">{children}</span>
     </li>
   ),
   strong: ({ children }: any) => (
@@ -79,24 +79,28 @@ function parseMarketSentiment(text: string) {
     const isNegative = /看跌|下跌|悲观|消极/i.test(sentiment);
     
     return (
-      <div className="flex items-center gap-2 mb-4 p-3 rounded-lg bg-gradient-to-r from-muted/30 to-muted/10 border">
-        {isPositive ? (
-          <TrendingUp className="h-5 w-5 text-green-500" />
-        ) : isNegative ? (
-          <TrendingDown className="h-5 w-5 text-red-500" />
-        ) : (
-          <Activity className="h-5 w-5 text-yellow-500" />
-        )}
-        <div>
-          <span className="text-xs text-muted-foreground">市场情绪</span>
-          <div className="font-medium text-foreground">{sentiment}</div>
+      <div className="flex items-center gap-3 mb-4 p-4 rounded-lg bg-gradient-to-r from-muted/30 to-muted/10 border border-border">
+        <div className="flex-shrink-0">
+          {isPositive ? (
+            <TrendingUp className="h-6 w-6 text-green-500" />
+          ) : isNegative ? (
+            <TrendingDown className="h-6 w-6 text-red-500" />
+          ) : (
+            <Activity className="h-6 w-6 text-yellow-500" />
+          )}
         </div>
-        <Badge 
-          variant={isPositive ? "default" : isNegative ? "destructive" : "secondary"}
-          className="ml-auto"
-        >
-          {isPositive ? "看涨" : isNegative ? "看跌" : "中性"}
-        </Badge>
+        <div className="flex-1 min-w-0">
+          <div className="text-xs text-muted-foreground font-medium mb-1">市场情绪</div>
+          <div className="font-semibold text-foreground text-sm">{sentiment}</div>
+        </div>
+        <div className="flex-shrink-0">
+          <Badge 
+            variant={isPositive ? "default" : isNegative ? "destructive" : "secondary"}
+            className="text-xs px-2 py-1"
+          >
+            {isPositive ? "看涨" : isNegative ? "看跌" : "中性"}
+          </Badge>
+        </div>
       </div>
     );
   }
@@ -108,8 +112,8 @@ function parseGenerationTime(text: string) {
   const timeMatch = text.match(/报告生成时间[^:：]*[:：]\s*([^\n]*)/i);
   if (timeMatch) {
     return (
-      <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
-        <Clock className="h-3 w-3" />
+      <div className="flex items-center gap-2 text-xs text-muted-foreground mb-4 px-3 py-2 bg-muted/20 rounded-md">
+        <Clock className="h-3 w-3 flex-shrink-0" />
         <span>生成时间: {timeMatch[1].trim()}</span>
       </div>
     );
@@ -178,21 +182,26 @@ export function MarketDataDisplay({ data, showOhlcv, title, symbol, isAnalysisEn
   }, [analysisResult]);
   
   return (
-    <Card className="overflow-hidden">
-      <CardHeader className="flex flex-row items-center justify-between space-x-2 bg-gradient-to-r from-background to-muted/20">
-        <div className="flex-1">
-            <CardTitle className="flex items-center gap-2">
-              {title}
-              <Badge variant="outline" className="text-xs">{symbol}</Badge>
+    <Card className="overflow-hidden shadow-sm">
+      <CardHeader className="flex flex-row items-center justify-between space-x-4 bg-gradient-to-r from-background to-muted/20 border-b">
+        <div className="flex-1 min-w-0">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <span className="truncate">{title}</span>
+              <Badge variant="outline" className="text-xs font-normal">
+                {symbol}
+              </Badge>
             </CardTitle>
-            <CardDescription>共 {data.length} 个数据点</CardDescription>
+            <CardDescription className="text-sm">
+              共 {data.length} 个数据点
+            </CardDescription>
         </div>
         {isAnalysisEnabled && (
-           <div className="flex flex-col items-end space-y-2 text-right">
+           <div className="flex-shrink-0">
              <Button 
                onClick={handleAnalysis} 
                disabled={isAnalyzing}
-               className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
+               className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground shadow-sm"
+               size="sm"
              >
                 {isAnalyzing ? ( 
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" /> 
@@ -206,14 +215,14 @@ export function MarketDataDisplay({ data, showOhlcv, title, symbol, isAnalysisEn
       </CardHeader>
       <CardContent className="p-6">
         <Tabs defaultValue="chart" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-6">
-            <TabsTrigger value="table" className="flex items-center gap-2">
+          <TabsList className="grid w-full grid-cols-2 mb-6 bg-muted/30">
+            <TabsTrigger value="table" className="flex items-center gap-2 text-sm">
               <Activity className="h-4 w-4" />
-              表格视图
+              <span>表格视图</span>
             </TabsTrigger>
-            <TabsTrigger value="chart" className="flex items-center gap-2">
+            <TabsTrigger value="chart" className="flex items-center gap-2 text-sm">
               <TrendingUp className="h-4 w-4" />
-              图表视图
+              <span>图表视图</span>
             </TabsTrigger>
           </TabsList>
           <TabsContent value="table">
@@ -226,25 +235,25 @@ export function MarketDataDisplay({ data, showOhlcv, title, symbol, isAnalysisEn
       </CardContent>
       
       {isAnalyzing && (
-        <CardFooter className="bg-muted/30">
-            <div className="w-full flex flex-col items-center justify-center p-6 text-center">
-                <div className="relative">
-                  <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+        <CardFooter className="bg-muted/30 border-t">
+            <div className="w-full flex flex-col items-center justify-center py-8 px-4 text-center">
+                <div className="relative mb-4">
+                  <Loader2 className="h-12 w-12 animate-spin text-primary" />
                   <Sparkles className="h-6 w-6 text-primary/60 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
                 </div>
-                <h3 className="font-semibold text-lg mb-2">AI正在分析市场数据</h3>
-                <p className="text-muted-foreground text-sm">正在运用深度学习算法分析技术指标和价格行为...</p>
+                <h3 className="font-semibold text-lg mb-2 text-foreground">AI正在分析市场数据</h3>
+                <p className="text-muted-foreground text-sm max-w-md">正在运用深度学习算法分析技术指标和价格行为...</p>
             </div>
         </CardFooter>
       )}
       
       {cleanAnalysisResult && (
-         <CardFooter className="bg-gradient-to-b from-muted/20 to-muted/40 border-t">
-            <div className="w-full space-y-4">
+         <CardFooter className="bg-gradient-to-b from-muted/20 to-muted/40 border-t p-6">
+            <div className="w-full space-y-6">
                 {/* 标题区域 */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-primary/10 rounded-lg">
+                    <div className="p-3 bg-primary/10 rounded-lg">
                       <Sparkles className="h-6 w-6 text-primary" />
                     </div>
                     <div>
@@ -252,13 +261,13 @@ export function MarketDataDisplay({ data, showOhlcv, title, symbol, isAnalysisEn
                       <p className="text-sm text-muted-foreground">基于技术指标的智能分析</p>
                     </div>
                   </div>
-                  <Badge variant="secondary" className="flex items-center gap-1">
+                  <Badge variant="secondary" className="flex items-center gap-1 px-3 py-1">
                     <Target className="h-3 w-3" />
-                    专业分析
+                    <span className="text-xs">专业分析</span>
                   </Badge>
                 </div>
 
-                <Separator className="my-4" />
+                <Separator className="bg-border" />
 
                 {/* 生成时间 */}
                 {parseGenerationTime(cleanAnalysisResult)}
@@ -267,7 +276,7 @@ export function MarketDataDisplay({ data, showOhlcv, title, symbol, isAnalysisEn
                 {parseMarketSentiment(cleanAnalysisResult)}
 
                 {/* 主要分析内容 */}
-                <div className="bg-card rounded-lg p-5 border shadow-sm">
+                <div className="bg-card rounded-lg p-6 border border-border shadow-sm">
                   <div className="prose prose-sm max-w-none">
                     <ReactMarkdown components={MarkdownComponents}>
                       {cleanAnalysisResult}
@@ -276,10 +285,11 @@ export function MarketDataDisplay({ data, showOhlcv, title, symbol, isAnalysisEn
                 </div>
 
                 {/* 免责声明 */}
-                <div className="flex items-start gap-2 p-3 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-                  <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
-                  <div className="text-xs text-yellow-800 dark:text-yellow-200">
-                    <strong>风险提示：</strong>本分析仅供参考，不构成投资建议。市场有风险，投资需谨慎。请结合自身情况做出投资决策。
+                <div className="flex items-start gap-3 p-4 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                  <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
+                  <div className="text-xs text-yellow-800 dark:text-yellow-200 leading-relaxed">
+                    <strong className="font-medium">风险提示：</strong>
+                    本分析仅供参考，不构成投资建议。市场有风险，投资需谨慎。请结合自身情况做出投资决策。
                   </div>
                 </div>
             </div>
