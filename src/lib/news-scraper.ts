@@ -81,12 +81,22 @@ export async function fetchBBCBusinessNews(): Promise<BBCRawNews[]> {
     
     // BBC新闻的几种选择器，按优先级排序
     const selectors = [
-      // 主要新闻区域的选择器
-      '[data-testid="liverpool-card"]',
+      // 最新的BBC页面结构 - 优先获取顶部最新新闻
+      '[data-testid="edinburgh-card"]', // 头条新闻
+      '[data-testid="london-card"]',    // 重要新闻
+      '[data-testid="birmingham-card"]', // 次要新闻
+      '[data-testid="liverpool-card"]', // 当前使用的选择器
+      '[data-testid="manchester-card"]', // 其他新闻
+      // 更通用的选择器
+      '[data-testid*="card"]',          // 所有card组件
       '.media__content',
       '.gs-c-promo',
-      '.bbc-uk8dsi', // 备用选择器
+      '.bbc-uk8dsi',
       '.gel-layout__item',
+      // 最新的页面结构
+      'article[data-testid]',
+      '.ssrcss-1f3bvyz-Stack',
+      '.ssrcss-11r1m41-RichTextComponentWrapper',
     ];
     
     let foundElements = false;
@@ -97,7 +107,12 @@ export async function fetchBBCBusinessNews(): Promise<BBCRawNews[]> {
       
       if (elements.length > 0) {
         foundElements = true;
-        elements.each((index, element) => {
+        
+        // 将元素转换为数组并按DOM顺序处理（越靠前的越新）
+        const elementsArray = Array.from(elements);
+        console.log(`📋 Processing ${elementsArray.length} elements in DOM order`);
+        
+        elementsArray.forEach((element, index) => {
           try {
             const $element = $(element);
             
@@ -167,9 +182,9 @@ export async function fetchBBCBusinessNews(): Promise<BBCRawNews[]> {
             console.warn('⚠️ Error parsing news item:', error);
           }
           
-          // 限制获取前10条新闻
-          if (news.length >= 10) {
-            return false; // 停止遍历
+          // 限制获取前15条新闻（为了有更多选择）
+          if (news.length >= 15) {
+            return; // 停止遍历
           }
         });
         
@@ -217,20 +232,35 @@ export async function fetchBBCBusinessNews(): Promise<BBCRawNews[]> {
       });
     }
     
-    // 按时间排序（最新的在前面）
+    console.log(`🔄 Processing ${news.length} raw news items...`);
+    
+    // 去重并按时间排序（最新的在前面）
     const sortedNews = news
-      .filter((item, index, array) => 
+      .filter((item, index, array) => {
         // 去重：相同标题或URL的只保留第一个
-        array.findIndex(other => 
+        const isDuplicate = array.findIndex(other => 
           other.title === item.title || other.url === item.url
-        ) === index
-      )
+        ) !== index;
+        
+        if (isDuplicate) {
+          console.log(`🗑️ Removing duplicate: ${item.title.substring(0, 50)}...`);
+        }
+        
+        return !isDuplicate;
+      })
       .sort((a, b) => {
         const dateA = new Date(a.publishedAt).getTime();
         const dateB = new Date(b.publishedAt).getTime();
-        return dateB - dateA; // 降序排列
+        const timeDiff = dateB - dateA; // 降序排列（最新在前）
+        
+        // 如果时间相同或解析失败，保持原有DOM顺序（越靠前越新）
+        if (isNaN(dateA) || isNaN(dateB) || Math.abs(timeDiff) < 1000) {
+          return 0; // 保持原有顺序
+        }
+        
+        return timeDiff;
       })
-      .slice(0, 10); // 只取前10条
+      .slice(0, 12); // 取前12条，确保有足够的新闻显示
     
     console.log(`✅ Successfully fetched ${sortedNews.length} BBC news items`);
     return sortedNews;
