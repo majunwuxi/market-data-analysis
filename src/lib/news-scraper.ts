@@ -11,45 +11,81 @@ const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36
  * 解析相对时间格式（如 "1 day ago", "2 hours ago"）
  */
 function parseRelativeTime(timeStr: string): string {
-  const now = new Date();
+  const originalTime = timeStr;
+  console.log(`⏰ Parsing time: "${originalTime}"`);
+  
+  // 如果没有时间字符串，返回当前时间
+  if (!timeStr || timeStr.trim() === '') {
+    console.log(`⏰ No time string provided, using current time`);
+    return new Date().toISOString();
+  }
+  
   const cleanTimeStr = timeStr.toLowerCase().trim();
   
   // 如果已经是ISO格式，直接返回
   if (cleanTimeStr.includes('t') && cleanTimeStr.includes('z')) {
+    console.log(`⏰ Already ISO format: ${timeStr}`);
     return timeStr;
   }
   
-  // 解析相对时间
-  const timeRegex = /(\d+)\s*(minute|hour|day|week|month|year)s?\s*ago/i;
-  const match = cleanTimeStr.match(timeRegex);
+  // 创建基准时间
+  const baseTime = new Date();
   
-  if (match) {
-    const amount = parseInt(match[1]);
-    const unit = match[2].toLowerCase();
-    
-    switch (unit) {
-      case 'minute':
-        now.setMinutes(now.getMinutes() - amount);
-        break;
-      case 'hour':
-        now.setHours(now.getHours() - amount);
-        break;
-      case 'day':
-        now.setDate(now.getDate() - amount);
-        break;
-      case 'week':
-        now.setDate(now.getDate() - (amount * 7));
-        break;
-      case 'month':
-        now.setMonth(now.getMonth() - amount);
-        break;
-      case 'year':
-        now.setFullYear(now.getFullYear() - amount);
-        break;
+  // 解析相对时间的多种格式
+  const patterns = [
+    /(\d+)\s*(minute|hour|day|week|month|year)s?\s*ago/i,
+    /(\d+)\s*hrs?\s*ago/i,  // "4 hrs ago"
+    /(\d+)\s*h\s*ago/i,     // "4h ago"
+    /(\d+)h/i,              // "4h"
+  ];
+  
+  for (const pattern of patterns) {
+    const match = cleanTimeStr.match(pattern);
+    if (match) {
+      const amount = parseInt(match[1]);
+      let unit = match[2]?.toLowerCase() || 'hour'; // 默认小时
+      
+      // 标准化单位名称
+      if (unit.startsWith('hr') || unit === 'h') {
+        unit = 'hour';
+      }
+      
+      console.log(`⏰ Matched pattern: ${amount} ${unit}(s) ago`);
+      
+      switch (unit) {
+        case 'minute':
+          baseTime.setMinutes(baseTime.getMinutes() - amount);
+          break;
+        case 'hour':
+          baseTime.setHours(baseTime.getHours() - amount);
+          break;
+        case 'day':
+          baseTime.setDate(baseTime.getDate() - amount);
+          break;
+        case 'week':
+          baseTime.setDate(baseTime.getDate() - (amount * 7));
+          break;
+        case 'month':
+          baseTime.setMonth(baseTime.getMonth() - amount);
+          break;
+        case 'year':
+          baseTime.setFullYear(baseTime.getFullYear() - amount);
+          break;
+      }
+      
+      const result = baseTime.toISOString();
+      console.log(`⏰ Parsed "${originalTime}" → ${result}`);
+      return result;
     }
   }
   
-  return now.toISOString();
+  // 如果都无法解析，根据原始顺序给一个合理的时间
+  // 假设越靠前的新闻越新，给每个新闻分配递减的时间
+  const fallbackTime = new Date();
+  fallbackTime.setHours(fallbackTime.getHours() - 1); // 默认1小时前
+  
+  console.log(`⏰ Could not parse "${originalTime}", using fallback: ${fallbackTime.toISOString()}`);
+  return fallbackTime.toISOString();
 }
 
 /**
@@ -112,7 +148,7 @@ export async function fetchBBCBusinessNews(): Promise<BBCRawNews[]> {
         const elementsArray = Array.from(elements);
         console.log(`📋 Processing ${elementsArray.length} elements in DOM order`);
         
-        elementsArray.forEach((element, index) => {
+        elementsArray.forEach((element, domIndex) => {
           try {
             const $element = $(element);
             
@@ -155,11 +191,15 @@ export async function fetchBBCBusinessNews(): Promise<BBCRawNews[]> {
             const timeElement = $element.find('time, .date, .timestamp, [data-testid="card-metadata-lastupdated"]').first();
             let publishedAt = timeElement.attr('datetime') || timeElement.text().trim();
             
-            // 解析相对时间格式
+            // 解析相对时间格式，如果解析失败，使用DOM顺序来推断时间
             if (publishedAt) {
               publishedAt = parseRelativeTime(publishedAt);
             } else {
-              publishedAt = new Date().toISOString();
+              // 如果没有时间信息，根据DOM顺序创建递减的时间
+              const fallbackTime = new Date();
+              fallbackTime.setHours(fallbackTime.getHours() - domIndex); // 每个新闻往前推1小时
+              publishedAt = fallbackTime.toISOString();
+              console.log(`⏰ No time found, using DOM order fallback: ${domIndex} hours ago`);
             }
             
             // 验证必要字段 - 放宽验证条件
@@ -170,10 +210,11 @@ export async function fetchBBCBusinessNews(): Promise<BBCRawNews[]> {
                 url: href,
                 publishedAt,
                 imageUrl: imageUrl || undefined,
+                domOrder: domIndex, // 添加DOM顺序信息用于排序
               };
               
               news.push(newsItem);
-              console.log(`📰 Found news: ${title.substring(0, 50)}...`);
+              console.log(`📰 Found news [${domIndex}]: ${title.substring(0, 50)}...`);
               console.log(`🔗 URL: ${href}`);
             } else {
               console.log(`⚠️ Skipping item - title: "${title}" (${title?.length} chars), href: "${href}"`);
@@ -249,16 +290,23 @@ export async function fetchBBCBusinessNews(): Promise<BBCRawNews[]> {
         return !isDuplicate;
       })
       .sort((a, b) => {
-        const dateA = new Date(a.publishedAt).getTime();
-        const dateB = new Date(b.publishedAt).getTime();
-        const timeDiff = dateB - dateA; // 降序排列（最新在前）
+        // 首先比较DOM顺序（越靠前越新）
+        const domOrderA = (a as any).domOrder || 999;
+        const domOrderB = (b as any).domOrder || 999;
         
-        // 如果时间相同或解析失败，保持原有DOM顺序（越靠前越新）
-        if (isNaN(dateA) || isNaN(dateB) || Math.abs(timeDiff) < 1000) {
-          return 0; // 保持原有顺序
+        if (domOrderA !== domOrderB) {
+          return domOrderA - domOrderB; // 升序：DOM顺序小的在前
         }
         
-        return timeDiff;
+        // 如果DOM顺序相同，再比较时间
+        const dateA = new Date(a.publishedAt).getTime();
+        const dateB = new Date(b.publishedAt).getTime();
+        
+        if (!isNaN(dateA) && !isNaN(dateB)) {
+          return dateB - dateA; // 降序：时间新的在前
+        }
+        
+        return 0; // 保持原有顺序
       })
       .slice(0, 12); // 取前12条，确保有足够的新闻显示
     

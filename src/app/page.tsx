@@ -25,7 +25,7 @@ export default function Home() {
           {/* 右侧：新闻面板 - 在大屏幕上占1/3宽度 */}
           <div className="xl:col-span-1">
             <div className="sticky top-6">
-              <NewsPanel className="min-h-[600px] max-h-[80vh]" />
+              <NewsPanel className="min-h-[700px] max-h-[90vh] h-[800px]" />
             </div>
           </div>
         </div>
