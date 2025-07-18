@@ -8,6 +8,51 @@ const BBC_BUSINESS_URL = 'https://www.bbc.com/business';
 const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36';
 
 /**
+ * 解析相对时间格式（如 "1 day ago", "2 hours ago"）
+ */
+function parseRelativeTime(timeStr: string): string {
+  const now = new Date();
+  const cleanTimeStr = timeStr.toLowerCase().trim();
+  
+  // 如果已经是ISO格式，直接返回
+  if (cleanTimeStr.includes('t') && cleanTimeStr.includes('z')) {
+    return timeStr;
+  }
+  
+  // 解析相对时间
+  const timeRegex = /(\d+)\s*(minute|hour|day|week|month|year)s?\s*ago/i;
+  const match = cleanTimeStr.match(timeRegex);
+  
+  if (match) {
+    const amount = parseInt(match[1]);
+    const unit = match[2].toLowerCase();
+    
+    switch (unit) {
+      case 'minute':
+        now.setMinutes(now.getMinutes() - amount);
+        break;
+      case 'hour':
+        now.setHours(now.getHours() - amount);
+        break;
+      case 'day':
+        now.setDate(now.getDate() - amount);
+        break;
+      case 'week':
+        now.setDate(now.getDate() - (amount * 7));
+        break;
+      case 'month':
+        now.setMonth(now.getMonth() - amount);
+        break;
+      case 'year':
+        now.setFullYear(now.getFullYear() - amount);
+        break;
+    }
+  }
+  
+  return now.toISOString();
+}
+
+/**
  * 从BBC商业频道抓取新闻
  */
 export async function fetchBBCBusinessNews(): Promise<BBCRawNews[]> {
@@ -95,8 +140,10 @@ export async function fetchBBCBusinessNews(): Promise<BBCRawNews[]> {
             const timeElement = $element.find('time, .date, .timestamp, [data-testid="card-metadata-lastupdated"]').first();
             let publishedAt = timeElement.attr('datetime') || timeElement.text().trim();
             
-            // 如果没有找到时间，使用当前时间
-            if (!publishedAt) {
+            // 解析相对时间格式
+            if (publishedAt) {
+              publishedAt = parseRelativeTime(publishedAt);
+            } else {
               publishedAt = new Date().toISOString();
             }
             
