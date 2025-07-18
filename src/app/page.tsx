@@ -1,18 +1,34 @@
 import { MarketDataClient } from '@/components/market-data-client';
+import { NewsPanel } from '@/components/news-panel';
 
 export default function Home() {
   return (
-    <main className="bg-background min-h-screen w-full flex flex-col items-center p-4 sm:p-8">
-      <div className="w-full max-w-4xl mx-auto">
-        <header className="text-center mb-8 relative">
-          <h1 className="font-headline text-4xl sm:text-5xl md:text-6xl font-bold text-primary mb-2">
-            市场快照
-          </h1>
-          <p className="text-muted-foreground text-lg">
-            获取您关注资产的最新OHLCV数据，并获得AI驱动的市场分析。
-          </p>
-        </header>
-        <MarketDataClient />
+    <main className="bg-background min-h-screen w-full p-4 sm:p-6 lg:p-8">
+      {/* 页面标题 */}
+      <header className="text-center mb-6 lg:mb-8">
+        <h1 className="font-headline text-3xl sm:text-4xl lg:text-5xl font-bold text-primary mb-2">
+          市场快照
+        </h1>
+        <p className="text-muted-foreground text-base lg:text-lg">
+          获取您关注资产的最新OHLCV数据，并获得AI驱动的市场分析。
+        </p>
+      </header>
+
+      {/* 主要内容区域 - 响应式左右布局 */}
+      <div className="max-w-7xl mx-auto">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 lg:gap-8">
+          {/* 左侧：市场数据分析 - 在大屏幕上占2/3宽度 */}
+          <div className="xl:col-span-2">
+            <MarketDataClient />
+          </div>
+          
+          {/* 右侧：新闻面板 - 在大屏幕上占1/3宽度 */}
+          <div className="xl:col-span-1">
+            <div className="sticky top-6">
+              <NewsPanel className="min-h-[600px] max-h-[80vh]" />
+            </div>
+          </div>
+        </div>
       </div>
     </main>
   );

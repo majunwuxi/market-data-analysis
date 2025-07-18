@@ -27,7 +27,6 @@ function aggregateTo15Min(data3min: MarketData[]): MarketData[] {
   if (data3min.length === 0) return [];
   
   const result: MarketData[] = [];
-  const symbol = data3min[0].symbol;
   
   // 按15分钟时间窗口分组（每5个3分钟K线聚合为1个15分钟K线）
   for (let i = 0; i < data3min.length; i += 5) {
@@ -43,8 +42,8 @@ function aggregateTo15Min(data3min: MarketData[]): MarketData[] {
     // - 时间戳：使用组内最后一根K线的时间戳
     
     const aggregated: MarketData = {
-      symbol: symbol,
       timestamp: group[group.length - 1].timestamp,
+      datetime: group[group.length - 1].datetime,
       open: group[0].open,
       high: Math.max(...group.map(item => item.high)),
       low: Math.min(...group.map(item => item.low)),
