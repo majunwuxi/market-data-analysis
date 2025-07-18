@@ -71,6 +71,9 @@ export async function fetchBBCBusinessNews(): Promise<BBCRawNews[]> {
             // 处理相对URL
             if (href && href.startsWith('/')) {
               href = `https://www.bbc.com${href}`;
+            } else if (href && !href.startsWith('http')) {
+              // 如果不是以http开头的绝对URL，也不是相对URL，可能是其他格式
+              href = `https://www.bbc.com${href.startsWith('/') ? href : '/' + href}`;
             }
             
             // 提取摘要
@@ -97,17 +100,21 @@ export async function fetchBBCBusinessNews(): Promise<BBCRawNews[]> {
               publishedAt = new Date().toISOString();
             }
             
-            // 验证必要字段
-            if (title && href && title.length > 10) {
-              news.push({
+            // 验证必要字段 - 放宽验证条件
+            if (title && href && title.length >= 5) {
+              const newsItem = {
                 title: title.substring(0, 200), // 限制标题长度
                 summary: summary.substring(0, 500) || title, // 如果没有摘要，使用标题
                 url: href,
                 publishedAt,
                 imageUrl: imageUrl || undefined,
-              });
+              };
               
+              news.push(newsItem);
               console.log(`📰 Found news: ${title.substring(0, 50)}...`);
+              console.log(`🔗 URL: ${href}`);
+            } else {
+              console.log(`⚠️ Skipping item - title: "${title}" (${title?.length} chars), href: "${href}"`);
             }
           } catch (error) {
             console.warn('⚠️ Error parsing news item:', error);
@@ -230,13 +237,17 @@ function getMockBBCNews(): BBCRawNews[] {
  */
 export function validateNewsItem(item: BBCRawNews): boolean {
   try {
+    console.log(`🔍 Validating news item: "${item.title?.substring(0, 50)}..."`);
+    
     // 检查必要字段
     if (!item.title || !item.url || !item.publishedAt) {
+      console.log(`❌ Missing required fields - title: ${!!item.title}, url: ${!!item.url}, publishedAt: ${!!item.publishedAt}`);
       return false;
     }
     
-    // 检查标题长度
-    if (item.title.length < 10 || item.title.length > 300) {
+    // 检查标题长度 - 放宽要求
+    if (item.title.length < 5 || item.title.length > 500) {
+      console.log(`❌ Invalid title length: ${item.title.length} (need 5-500 chars)`);
       return false;
     }
     
@@ -244,16 +255,20 @@ export function validateNewsItem(item: BBCRawNews): boolean {
     try {
       new URL(item.url);
     } catch {
+      console.log(`❌ Invalid URL format: ${item.url}`);
       return false;
     }
     
     // 检查时间格式
     if (isNaN(new Date(item.publishedAt).getTime())) {
+      console.log(`❌ Invalid date format: ${item.publishedAt}`);
       return false;
     }
     
+    console.log(`✅ News item validated successfully`);
     return true;
-  } catch {
+  } catch (error) {
+    console.log(`❌ Validation error:`, error);
     return false;
   }
 }
