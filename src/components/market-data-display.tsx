@@ -308,7 +308,7 @@ export function MarketDataDisplay({ data, showOhlcv, title, symbol, isAnalysisEn
             <MarketDataTable data={tableData} showOhlcv={showOhlcv} symbol={symbol} />
           </TabsContent>
           <TabsContent value="chart">
-            <MarketDataChart data={data} symbol={symbol} />
+            <MarketDataChart data={data} symbol={symbol} timeframe={title} />
           </TabsContent>
         </Tabs>
       </CardContent>

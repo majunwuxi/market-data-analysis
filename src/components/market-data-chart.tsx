@@ -26,6 +26,7 @@ import React from "react";
 interface MarketDataChartProps {
   data: MarketData[];
   symbol: string;
+  timeframe?: string; // 新增：时间框架，用于区分图表类型
 }
 
 const chartConfig = {
@@ -104,7 +105,7 @@ const CustomTooltip = ({ active, payload, label, coordinate }: any) => {
   };
 
 
-export function MarketDataChart({ data, symbol }: MarketDataChartProps) {
+export function MarketDataChart({ data, symbol, timeframe }: MarketDataChartProps) {
   const chartData = data
     .map((d) => ({
       ...d,
@@ -113,9 +114,24 @@ export function MarketDataChart({ data, symbol }: MarketDataChartProps) {
       ohlc: [d.open, d.close].sort((a,b) => a-b),
     }));
 
+  // 根据时间框架设置不同的Y轴范围百分比
+  const getYAxisRangePercentage = () => {
+    if (timeframe === "1小时数据") {
+      return 0.004; // ±0.4%
+    } else if (timeframe === "3分钟数据") {
+      return 0.003; // ±0.3%
+    }
+    // 默认使用原来的逻辑
+    return 0.005; // ±0.5%
+  };
+
+  const rangePercentage = getYAxisRangePercentage();
+  const minValue = Math.min(...data.map(d => d.low));
+  const maxValue = Math.max(...data.map(d => d.high));
+  
   const yDomain = [
-      Math.min(...data.map(d => d.low)) * 0.995,
-      Math.max(...data.map(d => d.high)) * 1.005
+    minValue * (1 - rangePercentage),
+    maxValue * (1 + rangePercentage)
   ];
 
   return (
