@@ -177,7 +177,7 @@ export function NewsPanel({ className }: NewsPanelProps) {
   const canShowChinese = hasAnyTranslation && showChinese;
 
   return (
-    <Card className={`h-full flex flex-col ${className}`}>
+    <Card className={`${className}`}>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-lg">
@@ -252,7 +252,7 @@ export function NewsPanel({ className }: NewsPanelProps) {
 
       <Separator />
 
-      <CardContent className="flex-1 overflow-hidden p-0">
+      <CardContent className="p-0">
         {/* 错误状态 */}
         {error && (
           <div className="p-4">
@@ -265,7 +265,7 @@ export function NewsPanel({ className }: NewsPanelProps) {
 
         {/* 加载状态 */}
         {status === 'loading' && !error && (
-          <div className="flex flex-col items-center justify-center h-full p-8">
+          <div className="flex flex-col items-center justify-center p-8">
             <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
             <p className="text-sm text-muted-foreground">正在获取最新商业推文...</p>
           </div>
@@ -273,24 +273,22 @@ export function NewsPanel({ className }: NewsPanelProps) {
 
         {/* 新闻列表 */}
         {news.length > 0 && !error && (
-          <div className="h-full overflow-y-auto">
-            <div className="p-4 space-y-3">
-              {news.map((item, index) => (
-                <NewsItemComponent
-                  key={item.id}
-                  news={item}
-                  showChinese={canShowChinese}
-                  onToggleLanguage={hasAnyTranslation ? toggleLanguage : undefined}
-                  className="last:mb-0"
-                />
-              ))}
-            </div>
+          <div className="p-4 space-y-3">
+            {news.map((item, index) => (
+              <NewsItemComponent
+                key={item.id}
+                news={item}
+                showChinese={canShowChinese}
+                onToggleLanguage={hasAnyTranslation ? toggleLanguage : undefined}
+                className="last:mb-0"
+              />
+            ))}
           </div>
         )}
 
         {/* 空状态 */}
         {news.length === 0 && status !== 'loading' && !error && (
-          <div className="flex flex-col items-center justify-center h-full p-8 text-center">
+          <div className="flex flex-col items-center justify-center p-8 text-center">
             <MessageSquare className="h-12 w-12 text-muted-foreground mb-4" />
             <p className="text-sm text-muted-foreground mb-4">暂无推文数据</p>
             <Button variant="outline" onClick={handleRefresh} disabled={isRefreshing}>
