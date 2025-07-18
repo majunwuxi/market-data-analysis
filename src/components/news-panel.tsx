@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Newspaper, RefreshCw, Languages, Loader2, AlertCircle, Wifi, WifiOff } from 'lucide-react';
+import { Newspaper, RefreshCw, Languages, Loader2, AlertCircle, Wifi, WifiOff, MessageSquare } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,7 +9,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { NewsItemComponent } from './news-item';
-import { getBBCNews, translateNews, refreshNewsCache } from '@/app/actions';
+import { getBusinessNews, translateNews, refreshNewsCache } from '@/app/actions';
 import type { NewsItem, NewsStatus } from '@/types/news';
 
 interface NewsPanelProps {
@@ -49,7 +49,7 @@ export function NewsPanel({ className }: NewsPanelProps) {
       setStatus('loading');
       setError(null);
       
-      const result = await getBBCNews();
+      const result = await getBusinessNews();
       
       if (result.error) {
         setError(result.error);
@@ -94,7 +94,7 @@ export function NewsPanel({ className }: NewsPanelProps) {
         setLastUpdated(result.lastUpdated || null);
         toast({
           title: "刷新成功",
-          description: `已获取 ${result.news.length} 条最新新闻`,
+          description: `已获取 ${result.news.length} 条最新资讯`,
         });
       }
     } catch (error) {
@@ -135,7 +135,7 @@ export function NewsPanel({ className }: NewsPanelProps) {
         saveLanguagePreference(true);
         toast({
           title: "翻译完成",
-          description: "新闻已成功翻译为中文",
+          description: "推文已成功翻译为中文",
         });
       }
     } catch (error) {
@@ -173,7 +173,7 @@ export function NewsPanel({ className }: NewsPanelProps) {
   };
 
   const statusInfo = getStatusInfo();
-  const hasAnyTranslation = news.some(item => item.titleChinese && item.summaryChinese);
+  const hasAnyTranslation = news.some(item => item.titleChinese && item.contentChinese);
   const canShowChinese = hasAnyTranslation && showChinese;
 
   return (
@@ -181,8 +181,8 @@ export function NewsPanel({ className }: NewsPanelProps) {
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-lg">
-            <Newspaper className="h-5 w-5 text-blue-600" />
-            商业资讯
+            <MessageSquare className="h-5 w-5 text-blue-600" />
+            商业推文
           </CardTitle>
           
           <div className="flex items-center gap-2">
@@ -199,7 +199,7 @@ export function NewsPanel({ className }: NewsPanelProps) {
               onClick={handleRefresh}
               disabled={isRefreshing || status === 'loading'}
               className="h-7 w-7 p-0"
-              title="刷新新闻"
+              title="刷新推文"
             >
               <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
             </Button>
@@ -267,7 +267,7 @@ export function NewsPanel({ className }: NewsPanelProps) {
         {status === 'loading' && !error && (
           <div className="flex flex-col items-center justify-center h-full p-8">
             <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-            <p className="text-sm text-muted-foreground">正在获取最新商业资讯...</p>
+            <p className="text-sm text-muted-foreground">正在获取最新商业推文...</p>
           </div>
         )}
 
@@ -291,8 +291,8 @@ export function NewsPanel({ className }: NewsPanelProps) {
         {/* 空状态 */}
         {news.length === 0 && status !== 'loading' && !error && (
           <div className="flex flex-col items-center justify-center h-full p-8 text-center">
-            <Newspaper className="h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-sm text-muted-foreground mb-4">暂无新闻数据</p>
+            <MessageSquare className="h-12 w-12 text-muted-foreground mb-4" />
+            <p className="text-sm text-muted-foreground mb-4">暂无推文数据</p>
             <Button variant="outline" onClick={handleRefresh} disabled={isRefreshing}>
               <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
               重新加载

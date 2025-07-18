@@ -1,16 +1,25 @@
 import { z } from 'zod';
 
-// 新闻项的数据结构
+// Tweets数据表的原始数据结构
+export const TweetRawDataSchema = z.object({
+  created_at: z.string(),
+  content: z.string(),
+  original_links: z.string().optional(),
+});
+
+export type TweetRawData = z.infer<typeof TweetRawDataSchema>;
+
+// 新闻项的数据结构（适配Twitter数据）
 export const NewsItemSchema = z.object({
   id: z.string(),
-  title: z.string(),
+  title: z.string(), // 从content提取的标题（前50个字符）
   titleChinese: z.string().optional(),
-  summary: z.string(),
-  summaryChinese: z.string().optional(),
-  url: z.string().url(),
-  publishedAt: z.string(),
-  imageUrl: z.string().url().optional(),
+  content: z.string(), // 完整的推文内容
+  contentChinese: z.string().optional(),
+  url: z.string().optional(), // original_links字段
+  publishedAt: z.string(), // created_at字段
   category: z.string().optional(),
+  source: z.literal('tweets').default('tweets'), // 标识数据来源
 });
 
 export type NewsItem = z.infer<typeof NewsItemSchema>;
@@ -34,20 +43,11 @@ export interface NewsResponse {
   lastUpdated?: string;
 }
 
-// BBC新闻原始数据结构
-export interface BBCRawNews {
-  title: string;
-  summary: string;
-  url: string;
-  publishedAt: string;
-  imageUrl?: string;
-}
-
-// 翻译请求结构
+// 翻译请求结构（适配Twitter内容）
 export interface TranslationRequest {
-  texts: {
+  tweets: {
     title: string;
-    summary: string;
+    content: string;
   }[];
 }
 
@@ -55,7 +55,7 @@ export interface TranslationRequest {
 export interface TranslationResponse {
   translations: {
     titleChinese: string;
-    summaryChinese: string;
+    contentChinese: string;
   }[];
   error?: string;
 } 

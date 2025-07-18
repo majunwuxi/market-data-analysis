@@ -1,15 +1,15 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import type { BBCRawNews, NewsItem, TranslationRequest, TranslationResponse } from '@/types/news';
+import type { NewsItem, TranslationRequest, TranslationResponse } from '@/types/news';
 
 /**
- * 使用Gemini API翻译新闻内容
+ * 使用Gemini API翻译推文新闻内容
  */
-export async function translateNewsWithGemini(
-  newsItems: BBCRawNews[], 
+export async function translateTweetsWithGemini(
+  newsItems: NewsItem[], 
   apiKey: string
 ): Promise<NewsItem[]> {
   try {
-    console.log(`🌐 Translating ${newsItems.length} news items with Gemini...`);
+    console.log(`🌐 Translating ${newsItems.length} tweet news items with Gemini...`);
     
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
@@ -50,11 +50,11 @@ export async function translateNewsWithGemini(
 }
 
 /**
- * 翻译一批新闻
+ * 翻译一批推文新闻
  */
 async function translateBatch(
   model: any, 
-  newsItems: BBCRawNews[], 
+  newsItems: NewsItem[], 
   startIndex: number
 ): Promise<NewsItem[]> {
   
@@ -75,15 +75,9 @@ async function translateBatch(
     const translation = translations[index];
     
     return {
-      id: `bbc-${Date.now()}-${startIndex + index}`,
-      title: item.title,
+      ...item,
       titleChinese: translation?.titleChinese || item.title,
-      summary: item.summary || item.title,
-      summaryChinese: translation?.summaryChinese || item.summary || item.title,
-      url: item.url,
-      publishedAt: item.publishedAt,
-      imageUrl: item.imageUrl,
-      category: 'business',
+      contentChinese: translation?.contentChinese || item.content,
     };
   });
   
@@ -91,20 +85,21 @@ async function translateBatch(
 }
 
 /**
- * 构建翻译提示
+ * 构建翻译提示（适配推文格式）
  */
-function buildTranslationPrompt(newsItems: BBCRawNews[]): string {
+function buildTranslationPrompt(newsItems: NewsItem[]): string {
   const newsTexts = newsItems.map((item, index) => {
-    return `新闻${index + 1}:
+    return `推文${index + 1}:
 标题: ${item.title}
-摘要: ${item.summary || item.title}`;
+内容: ${item.content}`;
   }).join('\n\n');
   
-  return `请将以下BBC商业新闻的标题和摘要翻译成中文。要求：
+  return `请将以下商业推文的标题和内容翻译成中文。要求：
 1. 翻译要准确、自然、符合中文表达习惯
-2. 保持原文的专业性和正式语调
-3. 商业术语要准确翻译
-4. 请按照指定的JSON格式返回结果
+2. 保持原文的专业性和语调
+3. 商业和金融术语要准确翻译
+4. 保持推文的简洁性，避免过度修饰
+5. 请按照指定的JSON格式返回结果
 
 ${newsTexts}
 
@@ -113,16 +108,16 @@ ${newsTexts}
   "translations": [
     {
       "titleChinese": "翻译后的标题1",
-      "summaryChinese": "翻译后的摘要1"
+      "contentChinese": "翻译后的内容1"
     },
     {
       "titleChinese": "翻译后的标题2", 
-      "summaryChinese": "翻译后的摘要2"
+      "contentChinese": "翻译后的内容2"
     }
   ]
 }
 
-注意：请确保返回的JSON格式正确，translations数组的长度应该与输入的新闻数量一致。`;
+注意：请确保返回的JSON格式正确，translations数组的长度应该与输入的推文数量一致。`;
 }
 
 /**
@@ -131,7 +126,7 @@ ${newsTexts}
 function parseTranslationResponse(
   responseText: string, 
   expectedCount: number
-): Array<{titleChinese: string; summaryChinese: string}> {
+): Array<{titleChinese: string; contentChinese: string}> {
   try {
     // 清理响应文本
     let cleanedText = responseText.trim();
@@ -150,7 +145,7 @@ function parseTranslationResponse(
       // 验证每个翻译项
       return translations.map((item: any, index: number) => ({
         titleChinese: item.titleChinese || `翻译失败的标题 ${index + 1}`,
-        summaryChinese: item.summaryChinese || `翻译失败的摘要 ${index + 1}`,
+        contentChinese: item.contentChinese || `翻译失败的内容 ${index + 1}`,
       }));
     }
     
@@ -162,8 +157,8 @@ function parseTranslationResponse(
     
     // 返回备用翻译
     return Array.from({ length: expectedCount }, (_, index) => ({
-      titleChinese: `商业新闻标题 ${index + 1}`,
-      summaryChinese: `商业新闻摘要 ${index + 1}`,
+      titleChinese: `商业推文标题 ${index + 1}`,
+      contentChinese: `商业推文内容 ${index + 1}`,
     }));
   }
 }
@@ -171,17 +166,11 @@ function parseTranslationResponse(
 /**
  * 创建备用新闻项（未翻译版本）
  */
-function createFallbackNewsItem(item: BBCRawNews, index: number): NewsItem {
+function createFallbackNewsItem(item: NewsItem, index: number): NewsItem {
   return {
-    id: `bbc-fallback-${Date.now()}-${index}`,
-    title: item.title,
+    ...item,
     titleChinese: `[英文] ${item.title}`,
-    summary: item.summary || item.title,
-    summaryChinese: `[英文] ${item.summary || item.title}`,
-    url: item.url,
-    publishedAt: item.publishedAt,
-    imageUrl: item.imageUrl,
-    category: 'business',
+    contentChinese: `[英文] ${item.content}`,
   };
 }
 
@@ -189,11 +178,11 @@ function createFallbackNewsItem(item: BBCRawNews, index: number): NewsItem {
  * 单独翻译单条新闻（用于更新现有新闻）
  */
 export async function translateSingleNews(
-  newsItem: BBCRawNews, 
+  newsItem: NewsItem, 
   apiKey: string
 ): Promise<NewsItem> {
   try {
-    const translated = await translateNewsWithGemini([newsItem], apiKey);
+    const translated = await translateTweetsWithGemini([newsItem], apiKey);
     return translated[0];
   } catch (error) {
     console.error('❌ Error translating single news:', error);
@@ -229,7 +218,7 @@ export async function fillMissingTranslations(
   apiKey: string
 ): Promise<NewsItem[]> {
   const itemsNeedingTranslation = newsItems.filter(item => 
-    !item.titleChinese || !item.summaryChinese
+    !item.titleChinese || !item.contentChinese
   );
   
   if (itemsNeedingTranslation.length === 0) {
@@ -239,26 +228,17 @@ export async function fillMissingTranslations(
   console.log(`🔄 Filling missing translations for ${itemsNeedingTranslation.length} items...`);
   
   try {
-    // 转换为BBCRawNews格式进行翻译
-    const rawNews: BBCRawNews[] = itemsNeedingTranslation.map(item => ({
-      title: item.title,
-      summary: item.summary,
-      url: item.url,
-      publishedAt: item.publishedAt,
-      imageUrl: item.imageUrl,
-    }));
-    
-    const translatedItems = await translateNewsWithGemini(rawNews, apiKey);
+    const translatedItems = await translateTweetsWithGemini(itemsNeedingTranslation, apiKey);
     
     // 合并翻译结果
     const updatedItems = newsItems.map(item => {
-      if (!item.titleChinese || !item.summaryChinese) {
-        const translated = translatedItems.find(t => t.url === item.url);
+      if (!item.titleChinese || !item.contentChinese) {
+        const translated = translatedItems.find(t => t.id === item.id);
         if (translated) {
           return {
             ...item,
             titleChinese: translated.titleChinese,
-            summaryChinese: translated.summaryChinese,
+            contentChinese: translated.contentChinese,
           };
         }
       }

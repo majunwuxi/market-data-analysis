@@ -10,7 +10,7 @@ export default function Home() {
           市场快照
         </h1>
         <p className="text-muted-foreground text-base lg:text-lg">
-          获取您关注资产的最新OHLCV数据，并获得AI驱动的市场分析。
+          获取您关注资产的最新OHLCV数据，并获得AI驱动的市场分析和实时商业推文。
         </p>
       </header>
 
@@ -22,7 +22,7 @@ export default function Home() {
             <MarketDataClient />
           </div>
           
-          {/* 右侧：新闻面板 - 在大屏幕上占1/3宽度 */}
+          {/* 右侧：商业推文面板 - 在大屏幕上占1/3宽度 */}
           <div className="xl:col-span-1">
             <div className="sticky top-6">
               <NewsPanel className="min-h-[700px] max-h-[90vh] h-[800px]" />

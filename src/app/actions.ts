@@ -5,8 +5,8 @@ import { getDocClient } from "@/lib/dynamodb";
 import { QueryCommand, ScanCommand } from "@aws-sdk/lib-dynamodb";
 import { revalidatePath } from "next/cache";
 import { analyzeMarketData, analyzeMarketDataWith15MinAggregation } from "@/ai/flows/analyze-market-flow";
-import { fetchBBCBusinessNews, validateNewsItem, cleanNewsItem } from "@/lib/news-scraper";
-import { translateNewsWithGemini, validateGeminiApiKey } from "@/lib/news-translator";
+import { fetchBusinessNews, validateNewsItem, cleanNewsItem, formatNewsForDisplay } from "@/lib/news-scraper";
+import { translateTweetsWithGemini, validateGeminiApiKey } from "@/lib/news-translator";
 import { getNewsWithCache, forceRefreshCache } from "@/lib/news-cache";
 import type { NewsResponse, NewsItem } from "@/types/news";
 
@@ -143,57 +143,35 @@ export async function analyzeMarketSentimentWith15MinAggregation(data: MarketDat
 // ======================== NEWS ACTIONS ========================
 
 /**
- * 获取BBC商业新闻（带缓存的智能策略）
+ * 获取商业资讯（来自DynamoDB Tweets表，带缓存的智能策略）
  */
-export async function getBBCNews(): Promise<NewsResponse> {
+export async function getBusinessNews(): Promise<NewsResponse> {
     try {
-        console.log('🗞️ Getting BBC news with cache strategy...');
+        console.log('🐦 Getting business news from Tweets table with cache strategy...');
         
         const result = await getNewsWithCache(async () => {
-            // 获取原始BBC新闻
-            const rawNews = await fetchBBCBusinessNews();
+            // 获取原始推文数据
+            const rawNews = await fetchBusinessNews();
             
             // 验证和清理数据
-            const validNews = rawNews
-                .filter(validateNewsItem)
-                .map(cleanNewsItem);
+            const validNews = formatNewsForDisplay(rawNews);
             
-            console.log(`✅ Fetched and validated ${validNews.length} BBC news items`);
+            console.log(`✅ Fetched and validated ${validNews.length} tweet news items`);
             
             // 检查是否有可用的API密钥进行翻译
             const apiKey = process.env.GEMINI_API_KEY;
             if (apiKey) {
                 console.log('🌐 Auto-translating news with server API key...');
                 try {
-                    return await translateNewsWithGemini(validNews, apiKey);
+                    return await translateTweetsWithGemini(validNews, apiKey);
                 } catch (error) {
-                    console.warn('⚠️ Auto-translation failed, returning English news:', error);
-                    // 如果翻译失败，返回英文版本
-                    return validNews.map((item, index) => ({
-                        id: `bbc-${Date.now()}-${index}`,
-                        title: item.title,
-                        titleChinese: undefined,
-                        summary: item.summary || item.title,
-                        summaryChinese: undefined,
-                        url: item.url,
-                        publishedAt: item.publishedAt,
-                        imageUrl: item.imageUrl,
-                        category: 'business' as const,
-                    }));
+                    console.warn('⚠️ Auto-translation failed, returning original news:', error);
+                    // 如果翻译失败，返回原版本
+                    return validNews;
                 }
             } else {
-                // 没有服务器端API密钥，返回英文版本
-                return validNews.map((item, index) => ({
-                    id: `bbc-${Date.now()}-${index}`,
-                    title: item.title,
-                    titleChinese: undefined,
-                    summary: item.summary || item.title,
-                    summaryChinese: undefined,
-                    url: item.url,
-                    publishedAt: item.publishedAt,
-                    imageUrl: item.imageUrl,
-                    category: 'business' as const,
-                }));
+                // 没有服务器端API密钥，返回原版本
+                return validNews;
             }
         });
         
@@ -205,7 +183,7 @@ export async function getBBCNews(): Promise<NewsResponse> {
         };
         
     } catch (error: any) {
-        console.error('❌ Error getting BBC news:', error);
+        console.error('❌ Error getting business news:', error);
         return {
             error: `Failed to fetch news: ${error.message}`,
             status: 'error',
@@ -214,7 +192,7 @@ export async function getBBCNews(): Promise<NewsResponse> {
 }
 
 /**
- * 翻译已有的新闻内容
+ * 翻译已有的新闻内容（适配推文格式）
  */
 export async function translateNews(news: NewsItem[], apiKey: string): Promise<{ news?: NewsItem[]; error?: string }> {
     if (!apiKey) {
@@ -230,16 +208,7 @@ export async function translateNews(news: NewsItem[], apiKey: string): Promise<{
             return { error: "提供的 Gemini API 密钥无效，请检查后重试。" };
         }
         
-        // 转换为BBCRawNews格式
-        const rawNews = news.map(item => ({
-            title: item.title,
-            summary: item.summary,
-            url: item.url,
-            publishedAt: item.publishedAt,
-            imageUrl: item.imageUrl,
-        }));
-        
-        const translatedNews = await translateNewsWithGemini(rawNews, apiKey);
+        const translatedNews = await translateTweetsWithGemini(news, apiKey);
         
         revalidatePath('/');
         return { news: translatedNews };
@@ -258,30 +227,18 @@ export async function translateNews(news: NewsItem[], apiKey: string): Promise<{
 }
 
 /**
- * 强制刷新新闻缓存
+ * 强制刷新新闻缓存（从Tweets表重新获取）
  */
 export async function refreshNewsCache(): Promise<NewsResponse> {
     try {
-        console.log('🔄 Force refreshing news cache...');
+        console.log('🔄 Force refreshing news cache from Tweets table...');
         
         const news = await forceRefreshCache(async () => {
-            const rawNews = await fetchBBCBusinessNews();
-            const validNews = rawNews
-                .filter(validateNewsItem)
-                .map(cleanNewsItem);
+            const rawNews = await fetchBusinessNews();
+            const validNews = formatNewsForDisplay(rawNews);
             
-            // 返回英文版本，让前端决定是否翻译
-            return validNews.map((item, index) => ({
-                id: `bbc-fresh-${Date.now()}-${index}`,
-                title: item.title,
-                titleChinese: undefined,
-                summary: item.summary || item.title,
-                summaryChinese: undefined,
-                url: item.url,
-                publishedAt: item.publishedAt,
-                imageUrl: item.imageUrl,
-                category: 'business' as const,
-            }));
+            // 返回原版本，让前端决定是否翻译
+            return validNews;
         });
         
         revalidatePath('/');

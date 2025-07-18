@@ -1,8 +1,11 @@
+"use client";
+
 import React from 'react';
-import { ExternalLink, Clock, Globe2, Languages } from 'lucide-react';
+import { ExternalLink, Clock, Globe, MessageSquare, Twitter } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 import type { NewsItem } from '@/types/news';
 
 interface NewsItemProps {
@@ -12,142 +15,154 @@ interface NewsItemProps {
   className?: string;
 }
 
-export function NewsItemComponent({ news, showChinese = false, onToggleLanguage, className }: NewsItemProps) {
-  const formatRelativeTime = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffMinutes = Math.floor(diffMs / (1000 * 60));
-    
-    if (diffHours >= 24) {
-      const diffDays = Math.floor(diffHours / 24);
-      return `${diffDays}天前`;
-    } else if (diffHours >= 1) {
-      return `${diffHours}小时前`;
-    } else if (diffMinutes >= 1) {
-      return `${diffMinutes}分钟前`;
-    } else {
-      return '刚刚';
+export function NewsItemComponent({ 
+  news, 
+  showChinese = false, 
+  onToggleLanguage, 
+  className = '' 
+}: NewsItemProps) {
+  
+  // 根据语言设置选择显示的内容
+  const displayTitle = showChinese && news.titleChinese ? news.titleChinese : news.title;
+  const displayContent = showChinese && news.contentChinese ? news.contentChinese : news.content;
+  
+  // 格式化时间显示
+  const formatTime = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
+      
+      if (diffInMinutes < 1) {
+        return '刚刚';
+      } else if (diffInMinutes < 60) {
+        return `${diffInMinutes}分钟前`;
+      } else if (diffInMinutes < 1440) {
+        const hours = Math.floor(diffInMinutes / 60);
+        return `${hours}小时前`;
+      } else {
+        const days = Math.floor(diffInMinutes / 1440);
+        return `${days}天前`;
+      }
+    } catch (error) {
+      return '时间未知';
     }
   };
 
-  const handleExternalClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    window.open(news.url, '_blank', 'noopener,noreferrer');
+  // 提取标签和关键词
+  const extractTags = (content: string) => {
+    const tags: string[] = [];
+    
+    // 提取股票代码 ($AAPL, $GOOGL等)
+    const stockSymbols = content.match(/\$[A-Z]{1,5}/g);
+    if (stockSymbols) {
+      tags.push(...stockSymbols.slice(0, 3)); // 最多显示3个股票代码
+    }
+    
+    // 提取话题标签 (#hashtag)
+    const hashtags = content.match(/#[a-zA-Z0-9_]+/g);
+    if (hashtags) {
+      tags.push(...hashtags.slice(0, 2)); // 最多显示2个话题标签
+    }
+    
+    return [...new Set(tags)]; // 去重
   };
 
-  // 判断是否有中文翻译
-  const hasTranslation = Boolean(news.titleChinese && news.summaryChinese);
+  const tags = extractTags(news.content);
   
-  // 获取显示的标题和摘要
-  const displayTitle = (showChinese && news.titleChinese) ? news.titleChinese : news.title;
-  const displaySummary = (showChinese && news.summaryChinese) ? news.summaryChinese : news.summary;
+  // 检查是否有链接
+  const hasLink = news.url && news.url.trim() !== '';
 
   return (
     <Card className={`group hover:shadow-md transition-all duration-200 border-l-4 border-l-blue-500 ${className}`}>
       <CardContent className="p-4">
-        {/* 头部：时间和语言切换 */}
+        {/* 头部：时间和来源 */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Twitter className="h-3 w-3" />
+            <span>推文</span>
+            <Separator orientation="vertical" className="h-3" />
             <Clock className="h-3 w-3" />
-            <span>{formatRelativeTime(news.publishedAt)}</span>
-            <Badge variant="outline" className="text-xs">
-              <Globe2 className="h-3 w-3 mr-1" />
-              BBC商业
-            </Badge>
+            <span>{formatTime(news.publishedAt)}</span>
           </div>
           
-          {hasTranslation && onToggleLanguage && (
+          {/* 语言切换按钮 */}
+          {onToggleLanguage && news.titleChinese && news.contentChinese && (
             <Button
               variant="ghost"
               size="sm"
               onClick={onToggleLanguage}
-              className="h-6 px-2 text-xs hover:bg-muted/50"
-              title={showChinese ? "显示英文" : "显示中文"}
+              className="h-6 px-2 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+              title={showChinese ? "切换到英文" : "切换到中文"}
             >
-              <Languages className="h-3 w-3 mr-1" />
+              <Globe className="h-3 w-3 mr-1" />
               {showChinese ? "EN" : "中"}
             </Button>
           )}
         </div>
 
         {/* 标题 */}
-        <h3 className="font-semibold text-sm leading-tight mb-2 line-clamp-2 group-hover:text-primary transition-colors">
-          {displayTitle}
-        </h3>
-
-        {/* 摘要 */}
-        <p className="text-xs text-muted-foreground leading-relaxed mb-3 line-clamp-3">
-          {displaySummary}
-        </p>
-
-        {/* 底部：阅读链接和语言指示器 */}
-        <div className="flex items-center justify-between">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExternalClick}
-            className="h-7 px-2 text-xs hover:bg-primary hover:text-primary-foreground"
-          >
-            <ExternalLink className="h-3 w-3 mr-1" />
-            阅读原文
-          </Button>
-          
-          <div className="flex items-center gap-1">
-            {!hasTranslation && (
-              <Badge variant="secondary" className="text-xs px-1.5 py-0.5">
-                英文原版
-              </Badge>
-            )}
-            {hasTranslation && (
-              <Badge 
-                variant={showChinese ? "default" : "secondary"} 
-                className="text-xs px-1.5 py-0.5"
-              >
-                {showChinese ? "中文翻译" : "英文原版"}
-              </Badge>
-            )}
-          </div>
+        <div className="mb-3">
+          <h3 className="font-medium text-sm leading-relaxed text-foreground line-clamp-2">
+            {displayTitle}
+          </h3>
         </div>
 
-        {/* 图片 */}
-        {news.imageUrl && (
-          <div className="mt-3 rounded-md overflow-hidden">
-            <img
-              src={news.imageUrl}
-              alt={displayTitle}
-              className="w-full h-24 object-cover hover:scale-105 transition-transform duration-200"
-              loading="lazy"
-            />
+        {/* 内容 */}
+        <div className="mb-3">
+          <p className="text-sm text-muted-foreground leading-relaxed line-clamp-4">
+            {displayContent}
+          </p>
+        </div>
+
+        {/* 标签 */}
+        {tags.length > 0 && (
+          <div className="flex flex-wrap gap-1 mb-3">
+            {tags.map((tag, index) => (
+              <Badge 
+                key={index} 
+                variant="secondary" 
+                className="text-xs px-2 py-0.5 font-mono"
+              >
+                {tag}
+              </Badge>
+            ))}
           </div>
         )}
+
+        {/* 底部：操作按钮 */}
+        <div className="flex items-center justify-between pt-2 border-t">
+          <div className="flex items-center gap-2">
+            {/* 翻译状态指示 */}
+            {news.titleChinese && news.contentChinese && (
+              <Badge variant="outline" className="text-xs">
+                <Globe className="h-3 w-3 mr-1" />
+                已翻译
+              </Badge>
+            )}
+          </div>
+          
+          {/* 原文链接 */}
+          {hasLink && (
+            <Button
+              variant="ghost"
+              size="sm"
+              asChild
+              className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+            >
+              <a 
+                href={news.url} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex items-center gap-1"
+              >
+                <ExternalLink className="h-3 w-3" />
+                <span>原文</span>
+              </a>
+            </Button>
+          )}
+        </div>
       </CardContent>
     </Card>
   );
-}
-
-// 添加CSS类用于文本截断
-const styles = `
-.line-clamp-2 {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.line-clamp-3 {
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-`;
-
-// 在组件首次渲染时注入样式
-if (typeof document !== 'undefined' && !document.querySelector('#news-item-styles')) {
-  const styleSheet = document.createElement('style');
-  styleSheet.id = 'news-item-styles';
-  styleSheet.textContent = styles;
-  document.head.appendChild(styleSheet);
 } 
