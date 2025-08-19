@@ -7,8 +7,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { MarketData } from "@/types/market";
-import { getTimezoneForSymbol } from "@/lib/timezone-helper";
-import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
+import { formatDateTimeInBeijing } from "@/lib/timezone-helper";
 
 interface MarketDataTableProps {
   data: MarketData[];
@@ -16,16 +15,9 @@ interface MarketDataTableProps {
   symbol: string;
 }
 
-// This function now converts the exchange-local datetime string to Beijing Time for display.
+// This function converts datetime string (with timezone info) to Beijing Time for display.
 const formatInBeijingTime = (datetime: string, symbol: string) => {
-  const exchangeTimeZone = getTimezoneForSymbol(symbol);
-  const beijingTimeZone = "Asia/Shanghai";
-  
-  // 1. Parse the datetime string in the context of the exchange's timezone.
-  const dateInExchangeTz = fromZonedTime(datetime, exchangeTimeZone);
-  
-  // 2. Format that date object into a string using Beijing Time.
-  return formatInTimeZone(dateInExchangeTz, beijingTimeZone, "yyyy-MM-dd HH:mm:ss");
+  return formatDateTimeInBeijing(datetime, 'full');
 };
 
 

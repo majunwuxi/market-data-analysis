@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const MarketDataSchema = z.object({
   timestamp: z.number(),
-  datetime: z.string(), // e.g., "2025-07-14T18:00:00"
+  datetime: z.string(), // ISO 8601 format with timezone info, e.g., "2025-07-14T18:00:00Z" or "2025-07-14T18:00:00-05:00"
   open: z.number(),
   high: z.number(),
   low: z.number(),

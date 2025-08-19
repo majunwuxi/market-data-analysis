@@ -11,7 +11,6 @@ import {
   Bar,
   ReferenceArea,
 } from "recharts";
-import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 import {
   ChartContainer,
   ChartTooltipContent,
@@ -20,7 +19,7 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 import type { MarketData } from "@/types/market";
-import { getTimezoneForSymbol } from "@/lib/timezone-helper";
+import { formatDateTimeInBeijing } from "@/lib/timezone-helper";
 import React from "react";
 
 interface MarketDataChartProps {
@@ -44,10 +43,7 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 const formatTimeInBeijing = (datetime: string, symbol: string) => {
-  const exchangeTimeZone = getTimezoneForSymbol(symbol);
-  const beijingTimeZone = "Asia/Shanghai";
-  const dateInExchangeTz = fromZonedTime(datetime, exchangeTimeZone);
-  return formatInTimeZone(dateInExchangeTz, beijingTimeZone, "HH:mm");
+  return formatDateTimeInBeijing(datetime, 'time-only');
 };
 
 // Custom shape for the candlestick
